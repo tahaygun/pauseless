@@ -101,7 +101,26 @@
           </div>
 
           <div class="tab-body" data-body="export" hidden>
-            <div class="hint">Export options arrive in the next step.</div>
+            <div class="field">
+              <label for="mediaFolder">Video folder <span class="muted">(optional)</span></label>
+              <div class="hint">
+                Where this video is on your computer, e.g. <code>C:\Users\you\Videos</code> or
+                <code>/Users/you/Movies</code>. Lets your editor find the file without relinking.
+              </div>
+              <input type="text" id="mediaFolder" class="text-input" placeholder="Paste folder path" spellcheck="false" />
+            </div>
+
+            <div class="export-group">
+              <h4>Timeline for your editor</h4>
+              <div class="export-list">
+                <button class="btn secondary" data-export="fcp" disabled>Final Cut Pro <small>.fcpxml</small></button>
+                <button class="btn secondary" data-export="resolve" disabled>DaVinci Resolve <small>.fcpxml</small></button>
+                <button class="btn secondary" data-export="premiere" disabled>Premiere Pro <small>.xml</small></button>
+                <button class="btn secondary" data-export="capcut" disabled>CapCut <small>project .zip</small></button>
+                <button class="btn secondary" data-export="edl" disabled>Other editors <small>.edl</small></button>
+              </div>
+              <div class="hint export-howto" id="exportHowto"></div>
+            </div>
           </div>
         </aside>
       </main>

@@ -2,6 +2,8 @@ import { analyze, type Analysis } from './engine/analyze';
 import { autoThreshold, DEFAULT_PARAMS, detect, fromDb, toDb, type CutResult, type SilenceParams } from './engine/silence';
 import { Timeline } from './ui/timeline';
 import { formatTime, formatDuration } from './ui/format';
+import { exportTimeline, HOWTO, type ExportKind } from './export';
+import { joinPath } from './export/common';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -132,6 +134,40 @@ function update() {
     `<b>${r.cuts.length}</b> cuts`;
 }
 
+// ---------- Export ----------
+
+const mediaFolder = $<HTMLInputElement>('mediaFolder');
+const FOLDER_KEY = 'recut.mediaFolder';
+try {
+  mediaFolder.value = localStorage.getItem(FOLDER_KEY) ?? '';
+} catch {
+  /* storage unavailable */
+}
+mediaFolder.addEventListener('input', () => {
+  try {
+    localStorage.setItem(FOLDER_KEY, mediaFolder.value);
+  } catch {
+    /* storage unavailable */
+  }
+});
+
+const exportButtons = document.querySelectorAll<HTMLButtonElement>('[data-export]');
+exportButtons.forEach((btn) =>
+  btn.addEventListener('click', () => {
+    const a = state.analysis;
+    const r = state.result;
+    if (!a || !r || !state.file) return;
+    const kind = btn.dataset.export as ExportKind;
+    exportTimeline(kind, {
+      name: state.file.name,
+      path: joinPath(mediaFolder.value, state.file.name),
+      media: a.media,
+      keeps: r.keeps,
+    });
+    $('exportHowto').innerHTML = HOWTO[kind];
+  }),
+);
+
 // ---------- Tabs ----------
 
 document.querySelectorAll<HTMLButtonElement>('.tab').forEach((tab) =>
@@ -174,6 +210,7 @@ async function open(file: File) {
   busy.hidden = false;
   busyText.textContent = 'Analyzing audio…';
   playBtn.disabled = true;
+  exportButtons.forEach((b) => (b.disabled = true));
   video.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
@@ -193,6 +230,7 @@ async function open(file: File) {
       `analyzed in ${(a.timings.total / 1000).toFixed(1)} s`,
     ].join(' · ');
     playBtn.disabled = false;
+    exportButtons.forEach((b) => (b.disabled = false));
     update();
     (window as unknown as { recutReady: Analysis }).recutReady = a;
   } catch (err) {
