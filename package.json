@@ -1,15 +1,25 @@
 {
   "name": "pauseless",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.3.0",
+  "description": "Cut silences and filler sounds out of videos in the browser and export to Final Cut Pro, DaVinci Resolve, Premiere Pro or CapCut.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:single": "tsc && vite build --mode single",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "silence-removal",
+    "video-editing",
+    "webcodecs",
+    "fcpxml",
+    "premiere",
+    "davinci-resolve",
+    "capcut",
+    "podcast"
+  ],
+  "license": "MIT",
   "devDependencies": {
     "typescript": "^5.9.3",
     "vite": "^6.4.5",
@@ -18,5 +28,6 @@
   "type": "module",
   "dependencies": {
     "mp4-muxer": "^5.2.1"
-  }
+  },
+  "private": true
 }

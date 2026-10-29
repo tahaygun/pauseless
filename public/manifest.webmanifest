@@ -6,7 +6,11 @@
   "display": "standalone",
   "background_color": "#16171b",
   "theme_color": "#1e2026",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
   "file_handlers": [
     { "action": "./", "accept": { "video/mp4": [".mp4"], "video/quicktime": [".mov"], "audio/mp4": [".m4a"], "audio/wav": [".wav"] } }
   ]

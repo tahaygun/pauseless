@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: 'es2022',
     outDir: mode === 'single' ? 'dist-single' : 'dist',
-    rollupOptions: mode === 'single' ? undefined : { input: { main: 'index.html', bench: 'bench.html' } },
   },
   worker: { format: 'iife' },
 }));

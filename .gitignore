@@ -1,6 +1,16 @@
-node_modules
-dist
+node_modules/
+dist/
+dist-single/
+.DS_Store
+*.log
+
+# media and training data
 *.mp4
 *.mov
+*.m4a
 *.wav
-dist-single
+*.mp3
+*.npz
+*.npy
+*.pt
+__pycache__/

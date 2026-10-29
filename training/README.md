@@ -7,7 +7,7 @@ Python reference for the in-browser filler detector.
   `edinburghcstr/ami` IHM recordings on Hugging Face and the AMI manual word annotations.
 - `data.py`: AMI Mix-Headset data and the evaluation set.
 - `train.py`: trains the dilated CNN (`python train.py 32 2500`).
-- `export.py`: writes `src/engine/fillerModel.ts`.
+- `export.py`: writes `src/engine/fillerModel.ts` (`python export.py net32.pt [turkish]`).
 
 Evaluation used PodcastFillers clips, whose labels are licensed for non-commercial research only.
 They are used to measure accuracy, never for training.
