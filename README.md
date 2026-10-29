@@ -5,6 +5,8 @@
 <p align="center">Cut silences and filler sounds out of your videos, right in the browser.<br>
 Export the cut video, or a timeline for Final Cut Pro, DaVinci Resolve, Premiere Pro or CapCut.</p>
 
+<p align="center"><a href="https://tahaygun.github.io/pauseless/"><b>Open Pauseless →</b></a></p>
+
 <p align="center">Free · Open source (MIT) · Nothing is uploaded</p>
 
 ---
@@ -27,7 +29,7 @@ Your video never leaves your computer. There is no server, no account and no tra
 
 ## Use it
 
-Open the site in **Chrome or Edge** on Windows or macOS (WebCodecs is required) and drop a video.
+Open [tahaygun.github.io/pauseless](https://tahaygun.github.io/pauseless/) in **Chrome or Edge** on Windows or macOS (WebCodecs is required) and drop a video.
 It can be installed as an app from the address bar and then works offline.
 
 Supported input: MP4, MOV, M4A (AAC or Opus audio; H.264 or HEVC video for rendering) and PCM WAV.
