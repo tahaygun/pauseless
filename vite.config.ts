@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
-export default defineConfig({
+// `vite build --mode single` produces one self-contained index.html.
+export default defineConfig(({ mode }) => ({
+  plugins: mode === 'single' ? [viteSingleFile()] : [],
   build: {
     target: 'es2022',
-    rollupOptions: { input: { main: 'index.html', bench: 'bench.html' } },
+    outDir: mode === 'single' ? 'dist-single' : 'dist',
+    rollupOptions: mode === 'single' ? undefined : { input: { main: 'index.html', bench: 'bench.html' } },
   },
-  worker: { format: 'es' },
-});
+  worker: { format: 'iife' },
+}));

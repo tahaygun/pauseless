@@ -1,5 +1,6 @@
 import { probe, type MediaInfo } from './container';
 import type { EnvelopeJob, EnvelopePart } from './envelope.worker';
+import EnvelopeWorker from './envelope.worker?worker&inline';
 
 export const ENVELOPE_RATE = 100; // windows per second (10 ms)
 
@@ -58,7 +59,7 @@ export async function analyze(file: File, onProgress?: (p: number) => void): Pro
 
 function runJob(job: EnvelopeJob): Promise<EnvelopePart> {
   return new Promise((resolve, reject) => {
-    const w = new Worker(new URL('./envelope.worker.ts', import.meta.url), { type: 'module' });
+    const w = new EnvelopeWorker();
     w.onmessage = (e) => {
       w.terminate();
       if (e.data.ok) resolve(e.data.part);
