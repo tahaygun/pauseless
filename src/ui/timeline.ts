@@ -24,6 +24,10 @@ export class Timeline {
   onSeek?: (t: number) => void;
   /** Called with the index of a filler the user clicked. */
   onFillerClick?: (index: number) => void;
+  /** When set, dragging on the waveform selects a range instead of seeking. */
+  markMode = false;
+  onMarkRange?: (start: number, end: number) => void;
+  private selection?: [number, number];
   onViewChange?: (zoom: number) => void;
 
   constructor(private root: HTMLElement, private canvas: HTMLCanvasElement, private playhead: HTMLElement) {
@@ -97,12 +101,31 @@ export class Timeline {
       }
       dragging = true;
       this.root.setPointerCapture(e.pointerId);
+      if (this.markMode || e.altKey) {
+        this.selection = [t, t];
+        this.draw();
+        return;
+      }
       this.onSeek?.(Math.max(0, Math.min(this.duration, t)));
     });
     this.root.addEventListener('pointermove', (e) => {
-      if (dragging) this.onSeek?.(Math.max(0, Math.min(this.duration, toTime(e))));
+      if (!dragging) return;
+      const t = Math.max(0, Math.min(this.duration, toTime(e)));
+      if (this.selection) {
+        this.selection[1] = t;
+        this.draw();
+      } else this.onSeek?.(t);
     });
-    this.root.addEventListener('pointerup', () => (dragging = false));
+    this.root.addEventListener('pointerup', () => {
+      dragging = false;
+      const sel = this.selection;
+      this.selection = undefined;
+      if (sel) {
+        const [a, b] = sel[0] < sel[1] ? sel : [sel[1], sel[0]];
+        if (b - a >= 0.08) this.onMarkRange?.(a, b);
+        this.draw();
+      }
+    });
     this.root.addEventListener(
       'wheel',
       (e) => {
@@ -232,6 +255,13 @@ export class Timeline {
         c.fillStyle = css('--filler-edge');
         c.fillRect(x0, top - 4, w, 3);
       }
+    }
+
+    if (this.selection) {
+      const [a, b] = this.selection;
+      const x0 = (Math.min(a, b) - vs) * pxPerSec;
+      c.fillStyle = css('--filler');
+      c.fillRect(x0, top - 4, Math.abs(b - a) * pxPerSec, h - top + 4);
     }
 
     // Threshold

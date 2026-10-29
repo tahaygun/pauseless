@@ -36,13 +36,14 @@ interface State {
   fillerProb?: Float32Array;
   fillers: Range[];
   keptFillers: Set<number>;
+  manualFillers: Range[];
 }
 
 const STORE_KEY = 'pauseless.params.v1';
 const removeFillers = $<HTMLInputElement>('removeFillers');
 const fillerSens = $<HTMLInputElement>('fillerSens');
 const fillerInfo = $('fillerInfo');
-const state: State = { auto: DEFAULT_PARAMS.threshold, params: loadParams(), fillers: [], keptFillers: new Set() };
+const state: State = { auto: DEFAULT_PARAMS.threshold, params: loadParams(), fillers: [], keptFillers: new Set(), manualFillers: [] };
 
 function loadParams(): SilenceParams {
   try {
@@ -159,12 +160,20 @@ function update() {
     state.keptFillers = kept;
     if (removeFillers.checked) fillerCuts = next.filter((_, i) => !kept.has(i));
     const n = next.length;
-    fillerInfo.innerHTML = n
-      ? `<b>${n}</b> filler sound${n === 1 ? '' : 's'} found${kept.size ? `, ${kept.size} kept` : ''}`
-      : 'No filler sounds found';
+    const m = state.manualFillers.length;
+    fillerInfo.innerHTML =
+      (n ? `<b>${n}</b> filler sound${n === 1 ? '' : 's'} found` : 'No filler sounds found') +
+      (kept.size ? `, ${kept.size} kept` : '') +
+      (m ? `, ${m} marked by you` : '');
   }
+  if (removeFillers.checked) fillerCuts = [...fillerCuts, ...state.manualFillers];
   state.result = combine(silence, fillerCuts);
-  timeline.setCuts(state.result.cuts, state.params.threshold, removeFillers.checked ? state.fillers : [], state.keptFillers);
+  timeline.setCuts(
+    state.result.cuts,
+    state.params.threshold,
+    removeFillers.checked ? [...state.fillers, ...state.manualFillers] : [],
+    state.keptFillers,
+  );
   const r = state.result;
   stats.innerHTML =
     `duration <b>${formatDuration(r.duration)}</b> – <b>${formatDuration(r.keptDuration)}</b> after cuts – ` +
@@ -172,9 +181,40 @@ function update() {
 }
 
 removeFillers.addEventListener('change', update);
+const markBtn = $<HTMLButtonElement>('markFiller');
+markBtn.addEventListener('click', () => {
+  timeline.markMode = !timeline.markMode;
+  markBtn.setAttribute('aria-pressed', String(timeline.markMode));
+  markBtn.textContent = timeline.markMode ? 'Drag across the sound on the timeline' : 'Mark a missed filler';
+});
+timeline.onMarkRange = (a, b) => {
+  state.manualFillers.push([a, b]);
+  state.manualFillers.sort((x, y) => x[0] - y[0]);
+  if (!removeFillers.checked) removeFillers.checked = true;
+  update();
+};
+
+$('exportLabels').addEventListener('click', () => {
+  const a = state.analysis;
+  if (!a || !state.file) return;
+  const r = (x: number) => Math.round(x * 1000) / 1000;
+  const labels = {
+    file: state.file.name,
+    duration: r(a.media.duration),
+    sensitivity: parseFloat(fillerSens.value),
+    fillers: [
+      ...state.fillers.filter((_, i) => !state.keptFillers.has(i)).map(([s, e]) => ({ start: r(s), end: r(e), source: 'auto' })),
+      ...state.manualFillers.map(([s, e]) => ({ start: r(s), end: r(e), source: 'manual' })),
+    ].sort((x, y) => x.start - y.start),
+    rejected: state.fillers.filter((_, i) => state.keptFillers.has(i)).map(([s, e]) => ({ start: r(s), end: r(e) })),
+  };
+  download(JSON.stringify(labels, null, 1), `${state.file.name.replace(/\.[^.]+$/, '')}.fillers.json`, 'application/json');
+});
 fillerSens.addEventListener('input', update);
 timeline.onFillerClick = (i) => {
-  if (state.keptFillers.has(i)) state.keptFillers.delete(i);
+  if (i >= state.fillers.length) {
+    state.manualFillers.splice(i - state.fillers.length, 1);
+  } else if (state.keptFillers.has(i)) state.keptFillers.delete(i);
   else state.keptFillers.add(i);
   update();
 };
@@ -335,6 +375,7 @@ async function open(file: File) {
     state.fillerProb = undefined;
     state.fillers = [];
     state.keptFillers = new Set();
+    state.manualFillers = [];
     fillerInfo.textContent = 'Looking for filler sounds…';
     state.auto = autoThreshold(a.envelope);
     if (autoBox.checked) state.params.threshold = state.auto;
@@ -349,6 +390,7 @@ async function open(file: File) {
     ].join(' · ');
     playBtn.disabled = false;
     exportButtons.forEach((b) => (b.disabled = false));
+    $<HTMLButtonElement>('exportLabels').disabled = false;
     renderBtn.disabled = !a.media.video?.codecString;
     update();
     (window as unknown as { recutReady: Analysis }).recutReady = a;

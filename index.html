@@ -243,6 +243,7 @@
                 <span class="unit">More</span>
               </div>
               <div class="hint filler-info" id="fillerInfo"></div>
+              <button class="btn secondary mark-btn" id="markFiller" type="button" aria-pressed="false">Mark a missed filler</button>
             </div>
 
             <button class="link-btn" id="resetParams">Reset to defaults</button>
@@ -283,6 +284,14 @@
                 <button class="btn secondary" data-export="edl" disabled>Other editors <small>.edl</small></button>
               </div>
               <div class="hint export-howto" id="exportHowto"></div>
+            </div>
+
+            <div class="export-group">
+              <h4>Filler labels</h4>
+              <div class="hint">Saves the filler sounds as you corrected them. Share the file to help improve detection for your language.</div>
+              <div class="export-list">
+                <button class="btn secondary" id="exportLabels" disabled>Filler labels <small>.json</small></button>
+              </div>
             </div>
           </div>
         </aside>

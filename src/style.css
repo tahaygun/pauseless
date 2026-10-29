@@ -741,3 +741,13 @@ code {
 .filler-info b {
   color: var(--filler-edge);
 }
+
+.mark-btn {
+  margin-top: 8px;
+  width: 100%;
+  justify-content: center;
+}
+.mark-btn[aria-pressed='true'] {
+  background: var(--filler);
+  border-color: var(--filler-edge);
+}
