@@ -11,3 +11,11 @@ Python reference for the in-browser filler detector.
 
 Evaluation used PodcastFillers clips, whose labels are licensed for non-commercial research only.
 They are used to measure accuracy, never for training.
+
+## Turkish fine-tune
+
+`finetune.py` continues training the AMI model on a recording whose filler cuts were corrected
+by hand in Pauseless (the first 40 minutes of one Turkish podcast, 150 fillers). Half of each batch
+comes from that recording, half from AMI, so English accuracy holds. On the last 8 minutes of the
+corrected part, which training never saw: F1 0.63 before, 0.75 after. The recording itself is not
+in this repository.
