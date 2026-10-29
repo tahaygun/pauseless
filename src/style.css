@@ -12,6 +12,8 @@
   --cut: rgba(255, 82, 82, 0.22);
   --cut-edge: rgba(255, 82, 82, 0.55);
   --threshold: #ffb84d;
+  --filler: rgba(255, 170, 60, 0.32);
+  --filler-edge: rgba(255, 170, 60, 0.9);
   --playhead: #ff4d4d;
   color-scheme: dark;
 }
@@ -731,4 +733,11 @@ code {
   .landing {
     scroll-behavior: auto;
   }
+}
+
+.filler-info {
+  margin-top: 6px;
+}
+.filler-info b {
+  color: var(--filler-edge);
 }

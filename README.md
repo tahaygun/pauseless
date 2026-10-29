@@ -23,3 +23,13 @@ npx vite build --mode single   # one self-contained HTML file in dist-single/
 ```
 
 `bench.html` (dev only) runs the analysis on a chosen file and prints timings.
+
+## Filler sounds
+
+Pauseless also finds filler sounds ("um", "uh", "hmm") with a small neural network (22k parameters)
+that runs in the browser on 40-band log-mel features. `src/engine/mel.ts` must stay identical to the
+training feature code.
+
+The model was trained on the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/)
+(CC BY 4.0, © University of Edinburgh and the AMI consortium). On held-out podcast speech it finds
+about 70% of fillers with about 70% precision at the default sensitivity.

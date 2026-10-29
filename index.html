@@ -231,6 +231,20 @@
               </div>
             </div>
 
+            <div class="field">
+              <div class="field-head">
+                <label for="fillerSens">Filler sounds</label>
+                <label class="toggle small"><input type="checkbox" id="removeFillers" checked /> Remove</label>
+              </div>
+              <div class="hint">Cuts “um”, “uh”, “ımm” and similar sounds. Click one on the timeline to keep it.</div>
+              <div class="slider-row">
+                <span class="unit side">Fewer</span>
+                <input type="range" id="fillerSens" min="0" max="1" step="0.01" />
+                <span class="unit">More</span>
+              </div>
+              <div class="hint filler-info" id="fillerInfo"></div>
+            </div>
+
             <button class="link-btn" id="resetParams">Reset to defaults</button>
           </div>
 

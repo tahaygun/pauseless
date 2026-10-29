@@ -2,6 +2,7 @@
 // Several of these run in parallel, each on its own range of samples.
 
 import type { AudioTrack, PcmTrack } from './container';
+import { MEL_BANDS, MelStream } from './mel';
 
 export interface EnvelopeJob {
   file: File;
@@ -17,6 +18,9 @@ export interface EnvelopePart {
   sumSq: Float64Array;
   count: Uint32Array;
   peak: Float32Array;
+  /** Log-mel frames (MEL_BANDS per frame) starting at frame index mel0 */
+  mel0: number;
+  mel: Float32Array;
 }
 
 const PREROLL = 3; // AAC frames decoded before the range so the first output is clean
@@ -28,19 +32,48 @@ class Acc {
   sumSq: Float64Array;
   count: Uint32Array;
   peak: Float32Array;
+  melStream?: MelStream;
+  private mono = new Float32Array(4096);
   constructor(public w0: number, w1: number) {
     const n = Math.max(0, w1 - w0);
     this.sumSq = new Float64Array(n);
     this.count = new Uint32Array(n);
     this.peak = new Float32Array(n);
   }
+
+  /** Feeds channel-planar samples starting at presentation time t0 (s). */
+  pushMel(planes: Float32Array[], n: number, sr: number, t0: number) {
+    this.melStream ??= new MelStream(sr);
+    if (this.mono.length < n) this.mono = new Float32Array(n);
+    const ch = planes.length;
+    for (let i = 0; i < n; i++) {
+      let m = 0;
+      for (let c = 0; c < ch; c++) m += planes[c][i];
+      this.mono[i] = m / ch;
+    }
+    this.melStream.push(this.mono, n, Math.round(t0 * sr));
+  }
+
+  packMel(): { mel0: number; mel: Float32Array } {
+    const ms = this.melStream;
+    if (!ms || ms.firstFrame < 0) return { mel0: 0, mel: new Float32Array(0) };
+    const out = new Float32Array(ms.frames.length * MEL_BANDS);
+    ms.frames.forEach((f, i) => f && out.set(f, i * MEL_BANDS));
+    return { mel0: ms.firstFrame, mel: out };
+  }
 }
 
 self.onmessage = async (e: MessageEvent<EnvelopeJob>) => {
   try {
     const part = e.data.track.kind === 'pcm' ? await runPcm(e.data, e.data.track) : await runCompressed(e.data, e.data.track);
-    const msg: EnvelopePart = { w0: part.w0, sumSq: part.sumSq, count: part.count, peak: part.peak };
-    (self as unknown as Worker).postMessage({ ok: true, part: msg }, [msg.sumSq.buffer, msg.count.buffer, msg.peak.buffer]);
+    const { mel0, mel } = part.packMel();
+    const msg: EnvelopePart = { w0: part.w0, sumSq: part.sumSq, count: part.count, peak: part.peak, mel0, mel };
+    (self as unknown as Worker).postMessage({ ok: true, part: msg }, [
+      msg.sumSq.buffer,
+      msg.count.buffer,
+      msg.peak.buffer,
+      msg.mel.buffer,
+    ]);
   } catch (err) {
     (self as unknown as Worker).postMessage({ ok: false, error: String((err as Error)?.message ?? err) });
   }
@@ -76,6 +109,7 @@ async function runCompressed(job: EnvelopeJob, t: AudioTrack): Promise<Acc> {
     for (let c = 0; c < ch; c++) data.copyTo(buf[c], { planeIndex: c, format: 'f32-planar', frameCount: n });
     const sr = data.sampleRate;
     const t0 = data.timestamp / 1e6 - off;
+    a.pushMel(buf, n, sr, t0);
     let w = Math.floor(t0 * r) - a.w0;
     let i = 0;
     while (i < n) {
@@ -195,6 +229,8 @@ async function runPcm(job: EnvelopeJob, t: PcmTrack): Promise<Acc> {
     fill();
     const v = new DataView(buf);
     const n = Math.floor(buf.byteLength / frameBytes);
+    const mono = new Float32Array(n);
+    const chunkStart = frame;
     for (let i = 0; i < n; i++, frame++) {
       const w = Math.floor(frame / spw) - acc.w0;
       let m = 0;
@@ -208,6 +244,7 @@ async function runPcm(job: EnvelopeJob, t: PcmTrack): Promise<Acc> {
         else if (bps === 4) x = v.getInt32(o, true) / 2147483648;
         else x = (v.getUint8(o) - 128) / 128;
         m += x * x;
+        mono[i] += x / t.channels;
         const ax = Math.abs(x);
         if (ax > pk) pk = ax;
       }
@@ -217,6 +254,7 @@ async function runPcm(job: EnvelopeJob, t: PcmTrack): Promise<Acc> {
         if (pk > acc.peak[w]) acc.peak[w] = pk;
       }
     }
+    acc.pushMel([mono], n, t.sampleRate, chunkStart / t.sampleRate);
   }
   return acc;
 }

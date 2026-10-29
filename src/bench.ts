@@ -1,4 +1,5 @@
 import { analyze } from './engine/analyze';
+import { fillerProbabilities } from './engine/fillers';
 import { autoThreshold, detect, DEFAULT_PARAMS } from './engine/silence';
 
 const out = document.getElementById('out')!;
@@ -6,6 +7,8 @@ document.getElementById('f')!.addEventListener('change', async (e) => {
   const file = (e.target as HTMLInputElement).files![0];
   try {
     const a = await analyze(file);
+    (window as any).analysis = a;
+    (window as any).fprob = await fillerProbabilities(a.mel);
     const thr = autoThreshold(a.envelope);
     const t = performance.now();
     const r = detect(a.envelope, a.media.duration, { ...DEFAULT_PARAMS, threshold: thr, padLeft: 0, padRight: 0, minSilence: 0.3 });

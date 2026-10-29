@@ -1,11 +1,13 @@
 import { analyze, type Analysis } from './engine/analyze';
-import { autoThreshold, DEFAULT_PARAMS, detect, fromDb, toDb, type CutResult, type SilenceParams } from './engine/silence';
+import { autoThreshold, combine, DEFAULT_PARAMS, detect, fromDb, toDb, type CutResult, type SilenceParams } from './engine/silence';
 import { Timeline } from './ui/timeline';
 import { formatTime, formatDuration } from './ui/format';
 import { heroWave } from './ui/heroWave';
 import { exportTimeline, HOWTO, type ExportKind } from './export';
 import { download, joinPath } from './export/common';
 import { render, sourceBitrate } from './render';
+import { fillerProbabilities, fillerRanges } from './engine/fillers';
+import type { Range } from './engine/silence';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -31,16 +33,24 @@ interface State {
   auto: number;
   params: SilenceParams;
   result?: CutResult;
+  fillerProb?: Float32Array;
+  fillers: Range[];
+  keptFillers: Set<number>;
 }
 
 const STORE_KEY = 'pauseless.params.v1';
-const state: State = { auto: DEFAULT_PARAMS.threshold, params: loadParams() };
+const removeFillers = $<HTMLInputElement>('removeFillers');
+const fillerSens = $<HTMLInputElement>('fillerSens');
+const fillerInfo = $('fillerInfo');
+const state: State = { auto: DEFAULT_PARAMS.threshold, params: loadParams(), fillers: [], keptFillers: new Set() };
 
 function loadParams(): SilenceParams {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (saved) {
       autoBox.checked = saved.autoThreshold ?? true;
+      removeFillers.checked = saved.removeFillers ?? true;
+      fillerSens.value = String(saved.fillerSens ?? 0.5);
       padLink.checked = saved.padLinked ?? true;
       return { ...DEFAULT_PARAMS, ...saved.params };
     }
@@ -54,7 +64,13 @@ function saveParams() {
   try {
     localStorage.setItem(
       STORE_KEY,
-      JSON.stringify({ params: state.params, autoThreshold: autoBox.checked, padLinked: padLink.checked }),
+      JSON.stringify({
+        params: state.params,
+        autoThreshold: autoBox.checked,
+        padLinked: padLink.checked,
+        removeFillers: removeFillers.checked,
+        fillerSens: parseFloat(fillerSens.value),
+      }),
     );
   } catch {
     /* storage unavailable */
@@ -129,13 +145,39 @@ function update() {
   saveParams();
   const a = state.analysis;
   if (!a) return;
-  state.result = detect(a.envelope, a.media.duration, state.params);
-  timeline.setCuts(state.result.cuts, state.params.threshold);
+  const silence = detect(a.envelope, a.media.duration, state.params);
+  let fillerCuts: Range[] = [];
+  if (state.fillerProb) {
+    const prev = state.fillers;
+    const next = fillerRanges(state.fillerProb, 0.9 - 0.5 * parseFloat(fillerSens.value));
+    // keep the user's choices for fillers that are still detected
+    const kept = new Set<number>();
+    next.forEach(([s, e], i) => {
+      if (prev.some(([ps, pe], j) => state.keptFillers.has(j) && ps < e && pe > s)) kept.add(i);
+    });
+    state.fillers = next;
+    state.keptFillers = kept;
+    if (removeFillers.checked) fillerCuts = next.filter((_, i) => !kept.has(i));
+    const n = next.length;
+    fillerInfo.innerHTML = n
+      ? `<b>${n}</b> filler sound${n === 1 ? '' : 's'} found${kept.size ? `, ${kept.size} kept` : ''}`
+      : 'No filler sounds found';
+  }
+  state.result = combine(silence, fillerCuts);
+  timeline.setCuts(state.result.cuts, state.params.threshold, removeFillers.checked ? state.fillers : [], state.keptFillers);
   const r = state.result;
   stats.innerHTML =
-    `duration <b>${formatDuration(r.duration)}</b> – <b>${formatDuration(r.keptDuration)}</b> without silence – ` +
+    `duration <b>${formatDuration(r.duration)}</b> – <b>${formatDuration(r.keptDuration)}</b> after cuts – ` +
     `<b>${r.cuts.length}</b> cuts`;
 }
+
+removeFillers.addEventListener('change', update);
+fillerSens.addEventListener('input', update);
+timeline.onFillerClick = (i) => {
+  if (state.keptFillers.has(i)) state.keptFillers.delete(i);
+  else state.keptFillers.add(i);
+  update();
+};
 
 // ---------- Export ----------
 
@@ -290,6 +332,10 @@ async function open(file: File) {
   try {
     const a = await analyze(file, (p) => (busyText.textContent = `Analyzing audio… ${Math.round(p * 100)}%`));
     state.analysis = a;
+    state.fillerProb = undefined;
+    state.fillers = [];
+    state.keptFillers = new Set();
+    fillerInfo.textContent = 'Looking for filler sounds…';
     state.auto = autoThreshold(a.envelope);
     if (autoBox.checked) state.params.threshold = state.auto;
     timeline.setMedia(a.envelope, a.media.duration);
@@ -306,6 +352,15 @@ async function open(file: File) {
     renderBtn.disabled = !a.media.video?.codecString;
     update();
     (window as unknown as { recutReady: Analysis }).recutReady = a;
+    const tf = performance.now();
+    fillerProbabilities(a.mel)
+      .then((p) => {
+        if (state.analysis !== a) return;
+        state.fillerProb = p;
+        (window as unknown as { fillerMs: number }).fillerMs = performance.now() - tf;
+        update();
+      })
+      .catch((err) => (fillerInfo.textContent = `Filler detection failed: ${(err as Error).message}`));
   } catch (err) {
     toast((err as Error).message || String(err));
     showLanding(true);

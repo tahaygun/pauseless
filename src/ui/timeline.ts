@@ -15,11 +15,15 @@ export class Timeline {
   private duration = 0;
   private cuts: Range[] = [];
   private threshold = 0;
+  private fillers: Range[] = [];
+  private keptFillers = new Set<number>();
   private viewStart = 0;
   private viewDur = 1;
   private time = 0;
   private raf = 0;
   onSeek?: (t: number) => void;
+  /** Called with the index of a filler the user clicked. */
+  onFillerClick?: (index: number) => void;
   onViewChange?: (zoom: number) => void;
 
   constructor(private root: HTMLElement, private canvas: HTMLCanvasElement, private playhead: HTMLElement) {
@@ -36,9 +40,11 @@ export class Timeline {
     this.draw();
   }
 
-  setCuts(cuts: Range[], threshold: number) {
+  setCuts(cuts: Range[], threshold: number, fillers: Range[] = [], keptFillers = new Set<number>()) {
     this.cuts = cuts;
     this.threshold = threshold;
+    this.fillers = fillers;
+    this.keptFillers = keptFillers;
     this.draw();
   }
 
@@ -80,9 +86,18 @@ export class Timeline {
     let dragging = false;
     this.root.addEventListener('pointerdown', (e) => {
       if (!this.duration) return;
+      const t = toTime(e);
+      const r = this.root.getBoundingClientRect();
+      if (e.clientY - r.top > RULER) {
+        const hit = this.fillers.findIndex(([s, en]) => t >= s && t <= en);
+        if (hit >= 0 && this.onFillerClick) {
+          this.onFillerClick(hit);
+          return;
+        }
+      }
       dragging = true;
       this.root.setPointerCapture(e.pointerId);
-      this.onSeek?.(Math.max(0, Math.min(this.duration, toTime(e))));
+      this.onSeek?.(Math.max(0, Math.min(this.duration, t)));
     });
     this.root.addEventListener('pointermove', (e) => {
       if (dragging) this.onSeek?.(Math.max(0, Math.min(this.duration, toTime(e))));
@@ -197,6 +212,25 @@ export class Timeline {
         c.moveTo(Math.round(x1) - 0.5, top - 4);
         c.lineTo(Math.round(x1) - 0.5, h);
         c.stroke();
+      }
+    }
+
+    // Filler sounds: filled when cut, outlined when the user keeps them
+    for (let i = 0; i < this.fillers.length; i++) {
+      const [s, e] = this.fillers[i];
+      if (e < vs || s > vs + vd) continue;
+      const x0 = (s - vs) * pxPerSec;
+      const w = Math.max(2, (e - s) * pxPerSec);
+      if (this.keptFillers.has(i)) {
+        c.strokeStyle = css('--filler-edge');
+        c.setLineDash([3, 3]);
+        c.strokeRect(Math.round(x0) + 0.5, top - 3.5, Math.round(w) - 1, h - top + 2);
+        c.setLineDash([]);
+      } else {
+        c.fillStyle = css('--filler');
+        c.fillRect(x0, top - 4, w, h - top + 4);
+        c.fillStyle = css('--filler-edge');
+        c.fillRect(x0, top - 4, w, 3);
       }
     }
 

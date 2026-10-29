@@ -123,3 +123,24 @@ export function autoThreshold(env: Envelope): number {
 
 export const toDb = (amp: number) => (amp > 0 ? 20 * Math.log10(amp) : -Infinity);
 export const fromDb = (db: number) => Math.pow(10, db / 20);
+
+/** Merges silence cuts with extra cut ranges (e.g. filler sounds) into one result. */
+export function combine(base: CutResult, extra: Range[]): CutResult {
+  if (!extra.length) return base;
+  const all = [...base.cuts, ...extra].sort((a, b) => a[0] - b[0]);
+  const cuts: Range[] = [];
+  for (const [s, e] of all) {
+    const last = cuts[cuts.length - 1];
+    if (last && s <= last[1] + 1e-3) last[1] = Math.max(last[1], e);
+    else cuts.push([Math.max(0, s), Math.min(base.duration, e)]);
+  }
+  const keeps: Range[] = [];
+  let pos = 0;
+  for (const [s, e] of cuts) {
+    if (s > pos) keeps.push([pos, s]);
+    pos = e;
+  }
+  if (pos < base.duration) keeps.push([pos, base.duration]);
+  const keptDuration = keeps.reduce((a, [s, e]) => a + e - s, 0);
+  return { cuts, keeps, duration: base.duration, keptDuration };
+}
