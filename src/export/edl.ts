@@ -9,7 +9,7 @@ export function toEdl(input: ExportInput, p: Prepared): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}:${pad(ff)}`;
   };
-  const lines = [`TITLE: ${p.baseName} (Recut)`, 'FCM: NON-DROP FRAME', ''];
+  const lines = [`TITLE: ${p.baseName} (Pauseless)`, 'FCM: NON-DROP FRAME', ''];
   p.clips.forEach((c, i) => {
     const len = c.srcOut - c.srcIn;
     lines.push(

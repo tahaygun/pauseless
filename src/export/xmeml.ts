@@ -63,7 +63,7 @@ export function toXmeml(input: ExportInput, p: Prepared): string {
 <!DOCTYPE xmeml>
 <xmeml version="4">
   <sequence id="sequence-1">
-    <name>${xml(p.baseName)} (Recut)</name>
+    <name>${xml(p.baseName)} (Pauseless)</name>
     <duration>${p.timelineFrames}</duration>
     ${rate}
     <timecode>${rate}<string>00:00:00:00</string><frame>0</frame><displayformat>NDF</displayformat></timecode>

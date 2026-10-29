@@ -3,16 +3,152 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recut</title>
+    <title>Pauseless – Remove silences from video, free and private</title>
+    <meta name="description" content="Pauseless removes silences and pauses from your videos in seconds, right in your browser. Export to Final Cut Pro, DaVinci Resolve, Premiere Pro, CapCut or MP4. Free, open source, nothing is uploaded." />
+    <meta name="keywords" content="remove silence from video, silence remover, cut pauses, jump cut, auto cut silence, capcut, premiere pro, davinci resolve, final cut pro, podcast editing" />
     <meta name="theme-color" content="#1e2026" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pauseless – Remove silences from video, free and private" />
+    <meta property="og:description" content="Cut the pauses out of a 1 hour video in seconds. Runs in your browser, nothing is uploaded. Free and open source." />
+    <meta property="og:image" content="./og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Pauseless",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Windows, macOS (Chrome or Edge)",
+        "description": "Remove silences from videos in the browser and export to Final Cut Pro, DaVinci Resolve, Premiere Pro, CapCut or MP4. Nothing is uploaded.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isAccessibleForFree": true,
+        "license": "https://opensource.org/licenses/MIT"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Are my videos uploaded anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Pauseless runs entirely in your browser. Your video is read from your disk, processed on your computer and never sent to a server." } },
+          { "@type": "Question", "name": "Is Pauseless really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free and open source under the MIT license. No account, no watermark, no limits." } },
+          { "@type": "Question", "name": "Which editors can I export to?", "acceptedAnswer": { "@type": "Answer", "text": "Final Cut Pro and DaVinci Resolve (FCPXML), Premiere Pro (XML), CapCut (project folder) and any editor that reads EDL. You can also export the finished MP4." } },
+          { "@type": "Question", "name": "Which browsers are supported?", "acceptedAnswer": { "@type": "Answer", "text": "Chrome and Edge on Windows and macOS. They include the WebCodecs video engine Pauseless uses." } }
+        ]
+      }
+    </script>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="app">
+    <div id="landing" class="landing">
+      <header class="l-nav">
+        <div class="l-wrap l-nav-inner">
+          <a class="l-logo" href="#" aria-label="Pauseless home"><img src="./icon.svg" alt="" width="28" height="28" /> Pauseless</a>
+          <nav class="l-links">
+            <a href="#how">How it works</a>
+            <a href="#editors">Editors</a>
+            <a href="#faq">FAQ</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="l-hero l-wrap">
+          <div class="l-hero-text">
+            <p class="l-eyebrow">Free · Open source · Runs in your browser</p>
+            <h1>Cut the silence out of your videos in seconds</h1>
+            <p class="l-lead">
+              Pauseless finds every pause in your recording and removes it. Send the result to Final Cut Pro, DaVinci
+              Resolve, Premiere Pro or CapCut, or export the finished video. Your files never leave your computer.
+            </p>
+            <ul class="l-ticks">
+              <li>No upload</li>
+              <li>No account</li>
+              <li>No watermark</li>
+              <li>No limits</li>
+            </ul>
+          </div>
+          <label class="l-drop" id="landingDrop" for="landingInput">
+            <canvas id="heroWave" aria-hidden="true"></canvas>
+            <span class="l-drop-title">Drop a video here</span>
+            <span class="btn l-drop-btn">Choose a video</span>
+            <span class="l-drop-hint">MP4, MOV, M4A or WAV · Chrome or Edge on Windows and macOS</span>
+            <input type="file" id="landingInput" accept="video/*,audio/*,.mp4,.mov,.m4a,.wav" hidden />
+          </label>
+        </section>
+
+        <section class="l-stats l-wrap" aria-label="Speed">
+          <div><b>~5 s</b><span>to analyze a 1 hour video</span></div>
+          <div><b>3 ms</b><span>to update cuts when you move a slider</span></div>
+          <div><b>0 MB</b><span>uploaded to any server</span></div>
+          <p class="l-note">Measured on a 1 hour, 2.7 GB MP4 in Chrome.</p>
+        </section>
+
+        <section class="l-section l-wrap" id="how">
+          <h2>How it works</h2>
+          <ol class="l-steps">
+            <li>
+              <h3>Drop your recording</h3>
+              <p>Riverside, Zoom, OBS or phone videos. Pauseless reads only the audio to find the quiet parts, so even long files are ready in seconds.</p>
+            </li>
+            <li>
+              <h3>Tune the cuts</h3>
+              <p>Set the silence threshold (or let auto pick it), the minimum pause length and how much breathing room to keep. The timeline and preview update instantly.</p>
+            </li>
+            <li>
+              <h3>Export</h3>
+              <p>Get an editable timeline for your editor, or render the finished MP4 straight to your disk.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="l-section l-wrap" id="editors">
+          <h2>Works with the editor you already use</h2>
+          <p class="l-sub">Every cut stays editable. Open the timeline, nudge a cut, keep editing.</p>
+          <ul class="l-editors">
+            <li><b>Final Cut Pro</b><span>.fcpxml</span></li>
+            <li><b>DaVinci Resolve</b><span>.fcpxml</span></li>
+            <li><b>Premiere Pro</b><span>.xml</span></li>
+            <li><b>CapCut</b><span>project folder</span></li>
+            <li><b>Other editors</b><span>.edl</span></li>
+            <li><b>Finished video</b><span>.mp4</span></li>
+          </ul>
+        </section>
+
+        <section class="l-section l-wrap l-private">
+          <div>
+            <h2>Private by design</h2>
+            <p>Most online tools upload your video to their servers. Pauseless does all the work on your own computer, using the video engine built into your browser. There is no server to send anything to.</p>
+            <p>That makes it fast, keeps client and guest recordings confidential, and means it keeps working when you are offline.</p>
+          </div>
+        </section>
+
+        <section class="l-section l-wrap" id="faq">
+          <h2>Questions</h2>
+          <div class="l-faq">
+            <details><summary>Are my videos uploaded anywhere?</summary><p>No. Your video is read from your disk, processed on your computer and never sent to a server.</p></details>
+            <details><summary>Is it really free?</summary><p>Yes. Pauseless is free and open source under the MIT license. No account, no watermark, no time limit.</p></details>
+            <details><summary>Which browsers work?</summary><p>Chrome and Edge on Windows and macOS. They include the WebCodecs engine Pauseless needs. Safari and Firefox are not supported yet.</p></details>
+            <details><summary>How long does exporting take?</summary><p>Editor timelines are ready instantly. Rendering a finished MP4 re-encodes the video, so it takes a few minutes for a long recording, depending on your computer.</p></details>
+            <details><summary>How do I open the project in CapCut?</summary><p>Unzip the downloaded folder into CapCut's drafts folder (shown in CapCut settings) and restart CapCut. The project appears in your list.</p></details>
+            <details><summary>Can I install it like an app?</summary><p>Yes. In Chrome or Edge, use the install icon in the address bar. It then opens in its own window and works offline.</p></details>
+          </div>
+        </section>
+      </main>
+
+      <footer class="l-footer l-wrap">
+        <span>Pauseless is free and open source (MIT). Made for creators who would rather not edit out every “umm” by hand.</span>
+      </footer>
+    </div>
+
+    <div id="app" hidden>
       <header class="topbar">
-        <div class="brand">✂ Recut</div>
+        <a class="brand" href="#" id="homeLink"><img src="./icon.svg" alt="" width="22" height="22" /> Pauseless</a>
         <div class="file-name" id="fileName"></div>
         <label class="btn">
           Open video
@@ -24,11 +160,6 @@
         <section class="viewer">
           <div class="video-wrap" id="videoWrap">
             <video id="video" playsinline preload="auto"></video>
-            <div class="drop-hint" id="dropHint">
-              <div class="drop-icon">⬇</div>
-              <div><b>Drop a video here</b> or use Open video</div>
-              <div class="muted">MP4, MOV, M4A or WAV. Everything stays on your computer.</div>
-            </div>
             <div class="busy" id="busy" hidden>
               <div class="spinner"></div>
               <div id="busyText">Analyzing audio…</div>

@@ -153,7 +153,7 @@ export function toCapcut(input: ExportInput, p: Prepared): { filename: string; d
     version: 360000,
   };
 
-  const folder = `${p.baseName} (Recut)`;
+  const folder = `${p.baseName} (Pauseless)`;
   const meta = {
     cloud_draft_cover: false,
     cloud_draft_sync: false,

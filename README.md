@@ -1,7 +1,7 @@
-# Recut
+# Pauseless
 
 Remove silences from videos in the browser and export the result to your editor.
-Everything runs on your computer; nothing is uploaded.
+Everything runs on your computer; nothing is uploaded. Free and open source (MIT).
 
 - **Analyze**: 1 hour MP4 in about 5 s (audio only is read and decoded, in parallel workers).
 - **Tweak**: threshold (with auto), minimum silence, padding, minimum clip. Re-detection takes a few ms.

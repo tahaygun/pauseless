@@ -26,8 +26,8 @@ export function toFcpxml(input: ExportInput, p: Prepared): string {
     </asset>
   </resources>
   <library>
-    <event name="Recut">
-      <project name="${name} (Recut)">
+    <event name="Pauseless">
+      <project name="${name} (Pauseless)">
         <sequence format="r1" duration="${t(p.timelineFrames)}" tcStart="0s" tcFormat="NDF" audioLayout="${
           p.channels === 1 ? 'mono' : 'stereo'
         }" audioRate="${p.sampleRate >= 48000 ? '48k' : '44.1k'}">

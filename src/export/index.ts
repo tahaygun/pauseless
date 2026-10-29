@@ -18,7 +18,7 @@ export const HOWTO: Record<ExportKind, string> = {
 
 export function exportTimeline(kind: ExportKind, input: ExportInput) {
   const p = prepare(input);
-  const base = `${p.baseName} (Recut)`;
+  const base = `${p.baseName} (Pauseless)`;
   switch (kind) {
     case 'fcp':
     case 'resolve':

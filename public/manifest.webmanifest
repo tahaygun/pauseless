@@ -1,6 +1,6 @@
 {
-  "name": "Recut",
-  "short_name": "Recut",
+  "name": "Pauseless",
+  "short_name": "Pauseless",
   "description": "Remove silences from videos and export to your editor. Runs entirely on your computer.",
   "start_url": "./",
   "display": "standalone",

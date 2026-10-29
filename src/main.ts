@@ -2,6 +2,7 @@ import { analyze, type Analysis } from './engine/analyze';
 import { autoThreshold, DEFAULT_PARAMS, detect, fromDb, toDb, type CutResult, type SilenceParams } from './engine/silence';
 import { Timeline } from './ui/timeline';
 import { formatTime, formatDuration } from './ui/format';
+import { heroWave } from './ui/heroWave';
 import { exportTimeline, HOWTO, type ExportKind } from './export';
 import { download, joinPath } from './export/common';
 import { render, sourceBitrate } from './render';
@@ -16,7 +17,8 @@ const stats = $('stats');
 const mediaInfo = $('mediaInfo');
 const busy = $('busy');
 const busyText = $('busyText');
-const dropHint = $('dropHint');
+const landing = $('landing');
+const appEl = $('app');
 const zoom = $<HTMLInputElement>('zoom');
 const autoBox = $<HTMLInputElement>('autoThreshold');
 const padLink = $<HTMLInputElement>('padLink');
@@ -31,7 +33,7 @@ interface State {
   result?: CutResult;
 }
 
-const STORE_KEY = 'recut.params.v1';
+const STORE_KEY = 'pauseless.params.v1';
 const state: State = { auto: DEFAULT_PARAMS.threshold, params: loadParams() };
 
 function loadParams(): SilenceParams {
@@ -124,17 +126,6 @@ $('resetParams').addEventListener('click', () => {
 
 function update() {
   syncControls();
-
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
-
-// Opened from the OS ("Open with Recut") when installed as an app
-const launch = (window as unknown as { launchQueue?: { setConsumer(cb: (p: { files: FileSystemFileHandle[] }) => void): void } })
-  .launchQueue;
-launch?.setConsumer(async ({ files }) => {
-  if (files.length) open(await files[0].getFile());
-});
   saveParams();
   const a = state.analysis;
   if (!a) return;
@@ -149,7 +140,7 @@ launch?.setConsumer(async ({ files }) => {
 // ---------- Export ----------
 
 const mediaFolder = $<HTMLInputElement>('mediaFolder');
-const FOLDER_KEY = 'recut.mediaFolder';
+const FOLDER_KEY = 'pauseless.mediaFolder';
 try {
   mediaFolder.value = localStorage.getItem(FOLDER_KEY) ?? '';
 } catch {
@@ -191,7 +182,7 @@ renderBtn.addEventListener('click', async () => {
   const r = state.result;
   const file = state.file;
   if (!a || !r || !file) return;
-  const name = `${file.name.replace(/\.[^.]+$/, '')} (Recut).mp4`;
+  const name = `${file.name.replace(/\.[^.]+$/, '')} (Pauseless).mp4`;
   let handle: FileSystemFileHandle | undefined;
   const picker = (window as unknown as { showSaveFilePicker?: (o: object) => Promise<FileSystemFileHandle> })
     .showSaveFilePicker;
@@ -244,22 +235,38 @@ document.querySelectorAll<HTMLButtonElement>('.tab').forEach((tab) =>
 
 // ---------- File loading ----------
 
-$<HTMLInputElement>('fileInput').addEventListener('change', (e) => {
-  const f = (e.target as HTMLInputElement).files?.[0];
-  if (f) open(f);
-});
+for (const id of ['fileInput', 'landingInput']) {
+  $<HTMLInputElement>(id).addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';
+    if (f) open(f);
+  });
+}
 
-const wrap = $('videoWrap');
+function showLanding(show: boolean) {
+  landing.hidden = !show;
+  appEl.hidden = show;
+  if (!show) requestAnimationFrame(() => timeline.draw());
+}
+$('homeLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  video.pause();
+  showLanding(true);
+});
+heroWave($<HTMLCanvasElement>('heroWave'));
+
+const dropTargets = [$('videoWrap'), $('landingDrop')];
 window.addEventListener('dragover', (e) => {
   e.preventDefault();
-  wrap.classList.add('dragging');
+  dropTargets.forEach((t) => t.classList.add('dragging'));
 });
 window.addEventListener('dragleave', (e) => {
-  if (!e.relatedTarget) wrap.classList.remove('dragging');
+  if (!e.relatedTarget) dropTargets.forEach((t) => t.classList.remove('dragging'));
 });
 window.addEventListener('drop', (e) => {
   e.preventDefault();
-  wrap.classList.remove('dragging');
+  dropTargets.forEach((t) => t.classList.remove('dragging'));
   const f = e.dataTransfer?.files?.[0];
   if (f) open(f);
 });
@@ -269,7 +276,7 @@ async function open(file: File) {
   state.file = file;
   state.analysis = undefined;
   $('fileName').textContent = file.name;
-  dropHint.hidden = true;
+  showLanding(false);
   busy.hidden = false;
   busyText.textContent = 'Analyzing audio…';
   playBtn.disabled = true;
@@ -301,7 +308,7 @@ async function open(file: File) {
     (window as unknown as { recutReady: Analysis }).recutReady = a;
   } catch (err) {
     toast((err as Error).message || String(err));
-    dropHint.hidden = false;
+    showLanding(true);
   } finally {
     busy.hidden = true;
   }
@@ -387,7 +394,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Opened from the OS ("Open with Recut") when installed as an app
+// Opened from the OS ("Open with Pauseless") when installed as an app
 const launch = (window as unknown as { launchQueue?: { setConsumer(cb: (p: { files: FileSystemFileHandle[] }) => void): void } })
   .launchQueue;
 launch?.setConsumer(async ({ files }) => {
