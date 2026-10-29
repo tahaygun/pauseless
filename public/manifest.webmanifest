@@ -1,0 +1,13 @@
+{
+  "name": "Recut",
+  "short_name": "Recut",
+  "description": "Remove silences from videos and export to your editor. Runs entirely on your computer.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#16171b",
+  "theme_color": "#1e2026",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
+  "file_handlers": [
+    { "action": "./", "accept": { "video/mp4": [".mp4"], "video/quicktime": [".mov"], "audio/mp4": [".m4a"], "audio/wav": [".wav"] } }
+  ]
+}

@@ -1,7 +1,7 @@
 // Minimal ISO BMFF (MP4/MOV) and WAV parsing. We only read the box headers and
 // the moov box, so finding the audio samples never touches the video payload.
 
-export interface AudioTrack {
+export interface AudioTrack extends SampleTable {
   kind: 'compressed';
   codec: string; // WebCodecs codec string, e.g. "mp4a.40.2"
   description?: Uint8Array; // AudioSpecificConfig / dOps
@@ -10,11 +10,6 @@ export interface AudioTrack {
   timescale: number;
   /** Seconds to subtract from media time to get presentation time (edit list). */
   startOffset: number;
-  offsets: Float64Array;
-  sizes: Uint32Array;
-  /** Decode timestamps in timescale units. */
-  times: Float64Array;
-  durations: Uint32Array;
 }
 
 export interface PcmTrack {
@@ -27,12 +22,29 @@ export interface PcmTrack {
   dataSize: number;
 }
 
-export interface VideoInfo {
+export interface SampleTable {
+  offsets: Float64Array;
+  sizes: Uint32Array;
+  /** Decode timestamps in timescale units. */
+  times: Float64Array;
+  durations: Uint32Array;
+}
+
+export interface VideoInfo extends SampleTable {
   codec: string; // sample entry fourcc, e.g. "avc1"
+  /** WebCodecs codec string, e.g. "avc1.640028" (empty if unknown) */
+  codecString: string;
+  description?: Uint8Array; // avcC / hvcC payload
   width: number;
   height: number;
   fps: number;
   duration: number;
+  timescale: number;
+  startOffset: number;
+  /** Composition offsets (pts - dts) in timescale units */
+  cts: Int32Array;
+  /** Sync sample flags; all true when the track has no stss box */
+  keyframes: Uint8Array;
 }
 
 export interface MediaInfo {
@@ -176,21 +188,54 @@ function parseTrak(v: DataView, start: number, end: number) {
   }
 
   if (handler === 'vide') {
-    const sttsBox = get('stts');
-    let count = 0;
-    if (sttsBox) {
-      const n = v.getUint32(sttsBox.start + 4);
-      for (let i = 0; i < n; i++) count += v.getUint32(sttsBox.start + 8 + i * 8);
+    const table = readSamples(v, get);
+    const n = table.sizes.length;
+    const cts = new Int32Array(n);
+    const ctts = get('ctts');
+    if (ctts) {
+      const cnt = v.getUint32(ctts.start + 4);
+      let k = 0;
+      for (let i = 0; i < cnt && k < n; i++) {
+        const c = v.getUint32(ctts.start + 8 + i * 8);
+        const off = v.getInt32(ctts.start + 12 + i * 8);
+        for (let j = 0; j < c && k < n; j++) cts[k++] = off;
+      }
+    }
+    const keyframes = new Uint8Array(n);
+    const stss = get('stss');
+    if (stss) {
+      const cnt = v.getUint32(stss.start + 4);
+      for (let i = 0; i < cnt; i++) {
+        const idx = v.getUint32(stss.start + 8 + i * 4) - 1;
+        if (idx < n) keyframes[idx] = 1;
+      }
+    } else keyframes.fill(1);
+    const e = entry.start;
+    const config = children(v, e + 78, entry.end).find((b) => b.type === 'avcC' || b.type === 'hvcC');
+    const description = config ? new Uint8Array(v.buffer, v.byteOffset + config.start, config.end - config.start).slice() : undefined;
+    let codecString = '';
+    if (config?.type === 'avcC' && description) {
+      const hex = (x: number) => x.toString(16).padStart(2, '0');
+      codecString = `${entry.type === 'avc3' ? 'avc3' : 'avc1'}.${hex(description[1])}${hex(description[2])}${hex(description[3])}`;
+    } else if (config?.type === 'hvcC' && description) {
+      codecString = hevcCodecString(entry.type, description);
     }
     const duration = mdur / timescale;
     return {
       handler,
       video: {
+        ...table,
         codec: entry.type,
-        width: v.getUint16(entry.start + 24),
-        height: v.getUint16(entry.start + 26),
-        fps: duration ? count / duration : 30,
+        codecString,
+        description,
+        width: v.getUint16(e + 24),
+        height: v.getUint16(e + 26),
+        fps: duration ? n / duration : 30,
         duration,
+        timescale,
+        startOffset,
+        cts,
+        keyframes,
       } as VideoInfo,
     };
   }
@@ -228,12 +273,32 @@ function parseTrak(v: DataView, start: number, end: number) {
     throw new Error(`Audio codec "${entry.type}" is not supported yet.`);
   }
 
-  // Sample table
+  const { offsets, sizes, times, durations } = readSamples(v, get);
+
+  return {
+    handler,
+    audio: {
+      kind: 'compressed',
+      codec,
+      description,
+      sampleRate,
+      channels,
+      timescale,
+      startOffset,
+      offsets,
+      sizes,
+      times,
+      durations,
+    } as AudioTrack,
+  };
+}
+
+function readSamples(v: DataView, get: (t: string) => Box | undefined): SampleTable {
   const sttsB = get('stts');
   const stscB = get('stsc');
-  const stszB = get('stsz') ?? get('stz2');
+  const stszB = get('stsz');
   const stcoB = get('stco') ?? get('co64');
-  if (!sttsB || !stscB || !stszB || !stcoB) throw new Error('Audio sample table is incomplete.');
+  if (!sttsB || !stscB || !stszB || !stcoB) throw new Error('Sample table is incomplete.');
 
   const uniform = v.getUint32(stszB.start + 4);
   const count = v.getUint32(stszB.start + 8);
@@ -281,23 +346,24 @@ function parseTrak(v: DataView, start: number, end: number) {
       }
     }
   }
+  return { offsets, sizes, times, durations };
+}
 
-  return {
-    handler,
-    audio: {
-      kind: 'compressed',
-      codec,
-      description,
-      sampleRate,
-      channels,
-      timescale,
-      startOffset,
-      offsets,
-      sizes,
-      times,
-      durations,
-    } as AudioTrack,
-  };
+function hevcCodecString(type: string, c: Uint8Array): string {
+  const space = ['', 'A', 'B', 'C'][c[1] >> 6];
+  const tier = c[1] & 0x20 ? 'H' : 'L';
+  const profile = c[1] & 0x1f;
+  let compat = (c[2] << 24) | (c[3] << 16) | (c[4] << 8) | c[5];
+  let rev = 0;
+  for (let i = 0; i < 32; i++) {
+    rev = (rev << 1) | (compat & 1);
+    compat >>>= 1;
+  }
+  const constraints: string[] = [];
+  const bytes = Array.from(c.slice(6, 12));
+  while (bytes.length && bytes[bytes.length - 1] === 0) bytes.pop();
+  for (const b of bytes) constraints.push(b.toString(16));
+  return [type === 'hev1' ? 'hev1' : 'hvc1', `${space}${profile}`, (rev >>> 0).toString(16), `${tier}${c[12]}`, ...constraints].join('.');
 }
 
 function findEsds(v: DataView, start: number, end: number): Uint8Array | undefined {

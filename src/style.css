@@ -418,3 +418,11 @@ code {
   margin-top: 10px;
   line-height: 1.5;
 }
+
+.render-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}

@@ -3,7 +3,8 @@ import { autoThreshold, DEFAULT_PARAMS, detect, fromDb, toDb, type CutResult, ty
 import { Timeline } from './ui/timeline';
 import { formatTime, formatDuration } from './ui/format';
 import { exportTimeline, HOWTO, type ExportKind } from './export';
-import { joinPath } from './export/common';
+import { download, joinPath } from './export/common';
+import { render, sourceBitrate } from './render';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -123,6 +124,17 @@ $('resetParams').addEventListener('click', () => {
 
 function update() {
   syncControls();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Opened from the OS ("Open with Recut") when installed as an app
+const launch = (window as unknown as { launchQueue?: { setConsumer(cb: (p: { files: FileSystemFileHandle[] }) => void): void } })
+  .launchQueue;
+launch?.setConsumer(async ({ files }) => {
+  if (files.length) open(await files[0].getFile());
+});
   saveParams();
   const a = state.analysis;
   if (!a) return;
@@ -168,6 +180,57 @@ exportButtons.forEach((btn) =>
   }),
 );
 
+const renderBtn = $<HTMLButtonElement>('renderBtn');
+const renderStatus = $('renderStatus');
+const renderBar = $('renderBar');
+const renderText = $('renderText');
+let cancelRender: (() => void) | undefined;
+
+renderBtn.addEventListener('click', async () => {
+  const a = state.analysis;
+  const r = state.result;
+  const file = state.file;
+  if (!a || !r || !file) return;
+  const name = `${file.name.replace(/\.[^.]+$/, '')} (Recut).mp4`;
+  let handle: FileSystemFileHandle | undefined;
+  const picker = (window as unknown as { showSaveFilePicker?: (o: object) => Promise<FileSystemFileHandle> })
+    .showSaveFilePicker;
+  if (picker) {
+    try {
+      handle = await picker({ suggestedName: name, types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }] });
+    } catch {
+      return; // user closed the save dialog
+    }
+  }
+  renderBtn.disabled = true;
+  renderStatus.hidden = false;
+  renderBar.style.width = '0';
+  renderText.textContent = 'Starting…';
+  const job = render(
+    { file, media: a.media, keeps: r.keeps, bitrate: sourceBitrate(a.media), handle },
+    (done, fps) => {
+      renderBar.style.width = `${(done * 100).toFixed(1)}%`;
+      const left = fps > 0 ? ((1 - done) * r.keptDuration * (a.media.video?.fps ?? 30)) / fps : 0;
+      renderText.textContent = `${Math.round(done * 100)}% · ${Math.round(fps)} fps · about ${formatDuration(left)} left`;
+    },
+  );
+  cancelRender = job.cancel;
+  try {
+    const res = await job.promise;
+    if (res.buffer) download(res.buffer, name, 'video/mp4');
+    renderBar.style.width = '100%';
+    renderText.textContent = `Done in ${formatDuration(res.elapsed / 1000)} (${res.frames} frames)`;
+    (window as unknown as { recutRendered: unknown }).recutRendered = res;
+  } catch (err) {
+    const msg = (err as Error).message;
+    renderText.textContent = msg === 'cancelled' ? 'Cancelled' : `Failed: ${msg}`;
+  } finally {
+    cancelRender = undefined;
+    renderBtn.disabled = false;
+  }
+});
+$('renderCancel').addEventListener('click', () => cancelRender?.());
+
 // ---------- Tabs ----------
 
 document.querySelectorAll<HTMLButtonElement>('.tab').forEach((tab) =>
@@ -211,6 +274,8 @@ async function open(file: File) {
   busyText.textContent = 'Analyzing audio…';
   playBtn.disabled = true;
   exportButtons.forEach((b) => (b.disabled = true));
+  renderBtn.disabled = true;
+  cancelRender?.();
   video.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
@@ -231,6 +296,7 @@ async function open(file: File) {
     ].join(' · ');
     playBtn.disabled = false;
     exportButtons.forEach((b) => (b.disabled = false));
+    renderBtn.disabled = !a.media.video?.codecString;
     update();
     (window as unknown as { recutReady: Analysis }).recutReady = a;
   } catch (err) {
@@ -316,3 +382,14 @@ function toast(msg: string) {
 }
 
 syncControls();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Opened from the OS ("Open with Recut") when installed as an app
+const launch = (window as unknown as { launchQueue?: { setConsumer(cb: (p: { files: FileSystemFileHandle[] }) => void): void } })
+  .launchQueue;
+launch?.setConsumer(async ({ files }) => {
+  if (files.length) open(await files[0].getFile());
+});
