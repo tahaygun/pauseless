@@ -1,1 +1,126 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Recut</title></head><body>Coming soon</body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recut</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">✂ Recut</div>
+        <div class="file-name" id="fileName"></div>
+        <label class="btn">
+          Open video
+          <input type="file" id="fileInput" accept="video/*,audio/*,.mp4,.mov,.m4a,.wav" hidden />
+        </label>
+      </header>
+
+      <main class="workspace">
+        <section class="viewer">
+          <div class="video-wrap" id="videoWrap">
+            <video id="video" playsinline preload="auto"></video>
+            <div class="drop-hint" id="dropHint">
+              <div class="drop-icon">⬇</div>
+              <div><b>Drop a video here</b> or use Open video</div>
+              <div class="muted">MP4, MOV, M4A or WAV. Everything stays on your computer.</div>
+            </div>
+            <div class="busy" id="busy" hidden>
+              <div class="spinner"></div>
+              <div id="busyText">Analyzing audio…</div>
+            </div>
+          </div>
+          <div class="transport">
+            <label class="toggle" title="Skip removed parts while playing">
+              <input type="checkbox" id="skipCuts" checked /> Skip cuts
+            </label>
+            <div class="transport-center">
+              <button class="icon-btn" id="playBtn" title="Play / pause (Space)" disabled>▶</button>
+            </div>
+            <div class="timecode" id="timecode">00:00:00.00</div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <nav class="tabs">
+            <button class="tab active" data-tab="silence">Silence</button>
+            <button class="tab" data-tab="export">Export</button>
+          </nav>
+
+          <div class="tab-body" data-body="silence">
+            <div class="field">
+              <div class="field-head">
+                <label for="threshold">Threshold</label>
+                <label class="toggle small"><input type="checkbox" id="autoThreshold" checked /> Auto</label>
+              </div>
+              <div class="hint">Audio quieter than this counts as silence.</div>
+              <div class="slider-row">
+                <input type="range" id="threshold" min="-80" max="-10" step="0.5" />
+                <input type="number" id="thresholdNum" step="0.5" /> <span class="unit">dB</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="minSilence">Minimum silence</label>
+              <div class="hint">Only silences longer than this are cut.</div>
+              <div class="slider-row">
+                <input type="range" id="minSilence" min="0.05" max="3" step="0.01" />
+                <input type="number" id="minSilenceNum" step="0.01" min="0" /> <span class="unit">s</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="field-head">
+                <label>Padding</label>
+                <label class="toggle small"><input type="checkbox" id="padLink" checked /> Linked</label>
+              </div>
+              <div class="hint">Silence kept around speech so cuts don't feel abrupt.</div>
+              <div class="slider-row">
+                <span class="unit side">Left</span>
+                <input type="range" id="padLeft" min="0" max="1" step="0.01" />
+                <input type="number" id="padLeftNum" step="0.01" min="0" /> <span class="unit">s</span>
+              </div>
+              <div class="slider-row">
+                <span class="unit side">Right</span>
+                <input type="range" id="padRight" min="0" max="1" step="0.01" />
+                <input type="number" id="padRightNum" step="0.01" min="0" /> <span class="unit">s</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="minKeep">Minimum clip</label>
+              <div class="hint">Remove sounds shorter than this between cuts (coughs, clicks).</div>
+              <div class="slider-row">
+                <input type="range" id="minKeep" min="0" max="2" step="0.01" />
+                <input type="number" id="minKeepNum" step="0.01" min="0" /> <span class="unit">s</span>
+              </div>
+            </div>
+
+            <button class="link-btn" id="resetParams">Reset to defaults</button>
+          </div>
+
+          <div class="tab-body" data-body="export" hidden>
+            <div class="hint">Export options arrive in the next step.</div>
+          </div>
+        </aside>
+      </main>
+
+      <section class="timeline-area">
+        <div class="timeline" id="timeline">
+          <canvas id="timelineCanvas"></canvas>
+          <div class="playhead" id="playhead"></div>
+        </div>
+        <footer class="statusbar">
+          <div id="mediaInfo" class="muted"></div>
+          <div id="stats"></div>
+          <div class="zoom">
+            <span class="muted">Zoom</span>
+            <input type="range" id="zoom" min="0" max="1" step="0.001" value="0" />
+          </div>
+        </footer>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
